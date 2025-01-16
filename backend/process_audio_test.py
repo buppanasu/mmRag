@@ -232,6 +232,37 @@ def process_audio(file_path):
     return json.dumps(response)
 
 
+def process_transcript(file_path):
+    # Generate the structured summary and action items using the transcription text
+    structured_content = generate_summary_and_action_items(transcription_text)
+
+    # Prepare to store the meeting data in MongoDB
+    file_id = os.path.basename(file_path)  # You can use file name or generate a unique ID
+    file_name = file_path
+    mongodb_client.store_meeting_data(file_id, file_name, structured_content)
+
+    # JSON to be stored for afterwards indexing
+    json_response_from_chunking = semantic_chunker(transcription_text,file_name)
+    cleaned_json_response = json_response_from_chunking.strip('```json').strip('```')
+    cleaned_json_response = cleaned_json_response.replace("\n", "").replace("\\n", "").strip()
+    # Parsed_content is the entire JSON output, maybe instead of storing 
+    parsed_content = json.loads(cleaned_json_response)
+    transform_and_index_parsed_content(parsed_content)
+    # Okay now i want
+    mongodb_client.store_meeting_data(file_id, file_name, parsed_content)
+
+
+    # Prepare the JSON response
+    response = {
+        "summary": transcription_text,
+        "file_id": file_id,
+        "file_name": file_name
+    }
+
+    # Return the JSON string
+    return json.dumps(response)
+
+
 # Add the if __name__ == "__main__" block here:
 if __name__ == "__main__":
     # Get the file path from the command-line arguments
